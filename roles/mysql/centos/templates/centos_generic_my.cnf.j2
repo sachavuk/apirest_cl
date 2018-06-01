@@ -1,0 +1,137 @@
+
+#{{ ansible_managed }}
+[mysqld]
+# Set user 
+user=mysql
+
+# set Mysql port 
+port={{  mysql_port }}
+
+#set mysql address
+bind-address={{mysql_bind_address}} 
+
+# set path to store data
+datadir={{ mysql_datadir }} 
+socket={{ mysql_socket_dir }}/mysql.sock
+
+#set mysql tmp dir
+{%if mysql_tmp_dir is defined %}
+tmpdir={{mysql_tmp_dir}}
+{%endif%}
+
+# Disabling symbolic-links is recommended to prevent assorted security risks
+symbolic-links=0
+
+{% if ansible_distribution_major_version == "5" %}
+#Enable slow log queries
+log-slow-queries={{ mysql_slow_query_file }} 
+long_query_time={{ mysql_slow_query_time }}
+
+# Memory settings.
+key_buffer_size={{ mysql_key_buffer_size }}
+max_allowed_packet={{ mysql_max_allowed_packet }}
+table_cache={{ mysql_table_open_cache }}
+sort_buffer_size={{ mysql_sort_buffer_size }}
+read_buffer_size={{ mysql_read_buffer_size }}
+read_rnd_buffer_size={{ mysql_read_rnd_buffer_size }}
+myisam_sort_buffer_size={{ mysql_myisam_sort_buffer_size }}
+thread_cache_size={{ mysql_thread_cache_size }}
+query_cache_size={{ mysql_query_cache_size }}
+thread_cache_size={{mysql_thread_cache_size }}
+join_buffer_size={{mysql_join_buffer_size}}
+
+#Other Setting
+wait_timeout={{ mysql_wait_timeout }}
+
+#Number of thread concurrency
+thread_concurrency={{ mysql_thread_concurrency }}
+
+{% endif %}
+
+#Force to use UTF8
+character_set_server = {{mysql_character_set_server | default("utf8") }}
+collation_server = {{ mysql_collation_server | default("utf8_general_ci") }}
+{%if mysql_init_connect is defined %}
+{% for init in mysql_init_connect %}
+init_connect = '{{ init }}'
+{% endfor %}
+{% endif %}
+{% if mysql_disable_client_handshake is defined and mysql_disable_client_handshake == "True" %}
+skip-character-set-client-handshake
+{% endif %}
+{% if ansible_distribution_major_version == "6" %}
+#Enable slow query
+slow-query-log={{ mysql_enable_slow_query }}
+slow_query_log_file={{ mysql_slow_query_file }} 
+long_query_time={{ mysql_slow_query_time }}
+
+#Enable log queries
+general_log={{ mysql_general_log | default ("Off") }}
+general_log_file={{ mysql_general_log_file | default ("/var/log/mysql/query.log") }}
+
+# * Fine Tuning
+key_buffer              = {{ mysql_key_buffer }}
+max_allowed_packet      = {{ mysql_max_allowed_packet }}
+thread_stack            = {{ mysql_thread_stack }}
+thread_cache_size       = {{ mysql_cache_size }}
+myisam-recover          = {{ mysql_myisam_recover }}
+max_connections         = {{ mysql_max_connections }}
+table_open_cache        = {{ mysql_table_cache }}
+thread_concurrency      = {{ mysql_thread_concurrency }}
+join_buffer_size        = {{ mysql_join_buffer_size }}
+sort_buffer_size        = {{ mysql_sort_buffer_size }}
+tmp_table_size		= {{ mysql_tmp_table_size }}
+max_heap_table_size	= {{ mysql_max_heap_table_size }}
+
+#** Query Cache Configuration
+query_cache_limit       = {{ mysql_query_cache_limit }}
+query_cache_size        = {{ mysql_query_cache_size }}
+
+
+# ** InnoDB
+# InnoDB is enabled by default with a 10MB datafile in /var/lib/mysql/.
+# Read the manual for more InnoDB related options. There are many!
+innodb_flush_log_at_trx_commit = {{ mysql_innodb_flush_log_at_trx_commit }}
+innodb_buffer_pool_size = {{ mysql_innodb_buffer_pool_size }}
+innodb_flush_method = {{ mysql_innodb_flush_method }}
+innodb_lock_wait_timeout = {{ mysql_innodb_lock_wait_timeout }}
+innodb_log_buffer_size = {{ mysql_innodb_log_buffer_size }}
+innodb_log_file_size = {{ mysql_innodb_log_file_size }}
+{% if mysql_innodb_file_per_table is defined %}
+{{ mysql_innodb_file_per_table }}
+{%endif%}
+
+#Other Setting
+wait_timeout={{ mysql_wait_timeout }}
+
+#Number of thread concurrency
+thread_concurrency={{ mysql_thread_concurrency }}
+
+{% endif %}
+
+{% if replication_actus is defined %}
+# Semisynchronous Replication
+# # http://dev.mysql.com/doc/refman/5.5/en/replication-semisync.html
+# # uncomment next line on MASTER
+ ;plugin-load=rpl_semi_sync_master=semisync_master.so
+# # uncomment next line on SLAVE
+ ;plugin-load=rpl_semi_sync_slave=semisync_slave.so
+
+# # Others options for Semisynchronous Replication
+ ;rpl_semi_sync_master_enabled=1
+ ;rpl_semi_sync_master_timeout=10
+ ;rpl_semi_sync_slave_enabled=1
+
+# # http://dev.mysql.com/doc/refman/5.5/en/performance-schema.html
+ ;performance_schema
+
+
+# Replication
+ server-id = 1
+ log_bin = /var/log/mysql/mysql-bin.log
+
+{%endif %}
+
+[mysqld_safe]
+log-error=/var/log/mysqld.log
+pid-file=/var/run/mysqld/mysqld.pid

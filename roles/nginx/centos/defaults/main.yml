@@ -1,0 +1,2 @@
+nginx_user: 'nginx'
+deploy_path: '/home'

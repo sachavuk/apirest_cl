@@ -1,0 +1,30 @@
+- name: install repo 
+  copy: 
+    src: varnishcache_varnish40.repo
+    dest: /etc/yum.repos.d/varnishcache_varnish40.repo
+
+- name: install varnish 
+  yum: name=varnish-{{ varnish_version }} state=installed 
+
+- name: Copy Varnish sysconfig.
+  template: src=varnish.j2 dest=/etc/sysconfig/varnish owner=root group=root mode=0644
+
+- name: Create directory for log
+  file: path="{{varnishncsa_path_log}}" state=directory
+
+- name: Copy Varnishncsa init script.
+  template: src=varnishncsa.j2 dest=/etc/init.d/varnishncsa owner=root group=root 
+  when: ansible_distribution_major_version == "6"
+  notify: restart varnishncsa
+
+- name: Copy Varnishlog init script.
+  template: src=varnishlog.j2 dest=/etc/init.d/varnishlog owner=root group=root 
+  when: ansible_distribution_major_version == "6"
+
+- name: Copy Varnish default VCL.
+  template: src={{  varnish_vcl_file }}.j2   dest={{ varnish_config_path }}/default.vcl  owner=root group=root mode=644 
+  notify: restart varnish
+
+- name: Ensure Varnish that to run on startup.
+  service: name=varnish  enabled=yes
+

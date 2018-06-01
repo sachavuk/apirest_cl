@@ -1,0 +1,8 @@
+
+
+- include_vars: "{{ item}}.yml"
+  with_items: "{{ run }}"
+  register: test
+
+- debug: msg="{{test }}"
+

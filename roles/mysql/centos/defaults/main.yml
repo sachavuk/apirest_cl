@@ -1,0 +1,58 @@
+---
+#update conf ?
+update_mysql_conf: "True"
+#mysql connection
+mysql_port: "3306"
+mysql_datadir: "/var/lib/mysql"
+mysql_bind_address: "127.0.0.1"
+mysql_socket_dir: "/var/lib/mysql"
+mysql_db_encoding: "UTF8"
+
+#Setting for slow query
+mysql_enable_slow_query: "0"
+mysql_slow_query_file: "/var/log/mysql/mysql-log-slow-queries.log"
+mysql_slow_query_time: "10"
+
+# Memory settings (default values optimized ~512MB RAM).
+#mysql_key_buffer_size: "256M"
+#mysql_max_allowed_packet: "1M"
+#mysql_table_open_cache: "256"
+#mysql_sort_buffer_size: "1M"
+#mysql_read_buffer_size: "1M"
+#mysql_read_rnd_buffer_size: "4M"
+#mysql_myisam_sort_buffer_size: "64M"
+#mysql_thread_cache_size: "8"
+#mysql_query_cache_size: "16M"
+#mysql_thread_cache_size: '0'
+#mysql_join_buffer_size: "128M"
+#mysql_cache_size: '8'
+
+# Fine Tuning
+mysql_key_buffer: '256M'
+mysql_max_allowed_packet: '128M'
+mysql_thread_stack: '192K'
+mysql_cache_size: 8
+mysql_myisam_recover: 'BACKUP'
+mysql_max_connections: 100
+mysql_table_cache: 64
+mysql_query_cache_limit: '1M'
+mysql_query_cache_size: '16M'
+mysql_isamchk_key_buffer: '16M'
+mysql_join_buffer_size: '131072'
+mysql_sort_buffer_size: '2097144'
+mysql_tmp_table_size: '16M'
+mysql_max_heap_table_size: '16M'
+# InnoDB tuning
+mysql_innodb_file_per_table: 'innodb_file_per_table'
+mysql_innodb_flush_method: 'O_DSYNC'
+mysql_innodb_buffer_pool_size: '128M'
+mysql_innodb_flush_log_at_trx_commit: 1
+mysql_innodb_lock_wait_timeout: 50
+mysql_innodb_log_buffer_size: '1M'
+mysql_innodb_log_file_size: '5M'
+
+# Other settings.
+mysql_wait_timeout: "28800"
+
+# Try number of CPU's * 2 for thread_concurrency.
+mysql_thread_concurrency: "2"

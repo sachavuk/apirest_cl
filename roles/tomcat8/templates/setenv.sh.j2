@@ -1,0 +1,22 @@
+#{{ ansible_managed }}
+{% if jmx is defined and jmx == "True" %}
+export CATALINA_OPTS="-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port={{jmx_port | default ("9999") }} -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"
+{% endif %}
+
+{% if appdynamics is defined and  appdynamics == "True" %}
+export CATALINA_OPTS="-javaagent:/home/produits/appdynamics/appagent/javaagent.jar"
+{% endif %}
+
+{% if tomcat_setenv is defined %}
+export CATALINA_OPTS="{{ tomcat_setenv }}"
+{% endif %}
+
+{% if JAVA_OPTS is defined %}
+JAVA_OPTS="{{ JAVA_OPTS }}"
+{% endif %}
+
+{% if tomcat_classpath is defined %}
+CLASSPATH={{ tomcat_classpath }}
+{% endif %}
+
+

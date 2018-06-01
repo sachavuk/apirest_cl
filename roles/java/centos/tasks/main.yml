@@ -1,0 +1,133 @@
+- name: copy java 6 rpm.bin for centos 64 bits
+  copy: src="{{ item }}" dest="/root" mode=755
+  with_items:
+    - jdk-6u43-linux-x64-rpm.bin
+    - jre-6u43-linux-x64-rpm.bin
+  when: java_version == "6"
+  tags: java
+
+- name: extract jdk 6 for centos 64 bits
+  shell: /root/jdk-6u43-linux-x64-rpm.bin creates="/root/jdk-6u43-linux-amd64.rpm"
+  when:  java_version == "6"
+  tags: java
+
+- name: extract jre 6 for centos 64 bits
+  shell: /root/jre-6u43-linux-x64-rpm.bin creates="/root/jre-6u43-linux-amd64.rpm"
+  when: java_version == "6"
+  tags: java
+
+- name: install rpm for jdk 6 and jre 6 for centos 64 bits
+  yum: name={{ item }} state=present
+  with_items:
+    - "/root/jdk-6u43-linux-amd64.rpm"
+    - "/root/jre-6u43-linux-amd64.rpm"
+  when: java_version == "6"
+  tags: java
+ 
+- name: install openjre 7 for centos 64 bits
+  yum: name=java-1.7.0-openjdk state=installed
+  when: java_version == "7"
+  tags: java
+
+- name: "[java8] Ensure python-httplib2 is present for uri module"
+  yum: name=python-httplib2 state=present
+  when: java_version == "8" or java_version == "7-oracle"
+  sudo: true
+  tags: java
+
+#- name:  "[java8] Download Oracle Java from the official website accepting the license"
+#  command: "curl -L -H 'Cookie:oraclelicense=accept-securebackup-cookie' -o jre-{{ java8.build_version  }}.rpm  http://download.oracle.com/otn-pub/java/jdk/{{ java8.build_version }}-{{ java8.version }}/jre-{{ java8.build_version }}-linux-x64.rpm "
+#  args:
+#    creates: "/root/jre-{{ java8.build_version  }}.rpm"
+#    chdir:   "/root"
+#  when: java_version == "8" 
+#  tags: java
+
+- name: "[java8] Download Oracle Java from the official website accepting the license"
+  uri: url="http://download.oracle.com/otn-pub/java/jdk/{{ java8.build_version }}-{{ java8.version }}/{{ java8.code_version }}/{{ java8.type }}-{{ java8.build_version }}-linux-{{ java8.architecture }}.rpm"
+       dest="/tmp/java-{{ java8.build_version }}.rpm"
+       HEADER_Cookie="oraclelicense=accept-securebackup-cookie;"
+       creates="/root/java-{{ java8.build_version }}.rpm"
+  when: java_version == "8"
+  register: java
+  tags: java
+
+- name: "install java8 Oracle"
+  yum: name="/tmp/java-{{ java8.build_version  }}.rpm" state=installed
+  when: java_version == "8" 
+  tags: java
+
+
+#- name: "[java8] Make sure the Java installation destination path exists"
+#  file: path="{{ java8.destination }}" state=directory
+#  when: java_version == "8"
+#  sudo: true
+#  tags: java
+#
+#- name: "[java8] Extract target directory from archive"
+#  shell: tar -tf /root/java-{{ java8.build_version }}.tar.gz | head -1
+#  register: java_extract_dir
+#  when: java.changed and java_version == "8"
+#  tags: java
+#
+#- name: "[java8] Un-tar Java for versions not supported by make-jpkg"
+#  command: tar xvf /root/java-{{ java8.build_version }}.tar.gz chdir={{ java8.destination }} creates={{ java8.destination }}{{ java_extract_dir.stdout }}
+#  when: java.changed and java_version == "8"
+#  sudo: true
+#  tags: java
+
+#- name: "[java8] Set-up java with the update-alternatives"
+#  command: update-alternatives --install "/usr/bin/java8" "java8" "{{ java8.destination }}{{ java_extract_dir.stdout }}bin/java" 1
+#  when: java.changed and java_version == "8"
+#  sudo: true
+#  tags: java 
+#
+#- name: "[java8] Set-up directory for java 8 with the update-alternatives"
+#  command: update-alternatives --install "/usr/lib/jvm/java-8-oracle" "java_dir" "{{ java8.destination }}{{ java_extract_dir.stdout }}" 1
+#  when: java.changed and java_version == "8"
+#  sudo: true
+#  tags: java 
+#
+- name: "[java7oracle] Download Oracle Java from the official website accepting the license"
+  uri: url="http://download.oracle.com/otn-pub/java/jdk/{{ java7oracle.build_version }}/{{ java7oracle.type }}-{{ java7oracle.version }}-linux-{{ java7oracle.architecture }}.tar.gz"
+       dest="/tmp/java-{{ java7oracle.build_version }}.tar.gz"
+       HEADER_Cookie="oraclelicense=accept-securebackup-cookie;"
+       creates="/tmp/java-{{ java7oracle.build_version }}.tar.gz"
+  when: java_version == "7-oracle"
+  register: java
+  tags: java
+
+
+- name: "[java7oracle] Make sure the Java installation destination path exists"
+  file: path="{{ java7oracle.destination }}" state=directory             
+  when: java_version == "7-oracle"
+  sudo: true                                                       
+  tags: java                                                       
+                                                                   
+- name: "[java7oracle] Extract target directory from archive"
+  shell: tar -tf /tmp/java-{{ java7oracle.build_version }}.tar.gz | head -1
+  register: java_extract_dir
+  when: java.changed and java_version == "7-oracle"
+  tags: java
+
+- name: "[java7oracle] Un-tar Java for versions not supported by make-jpkg" 
+  command: tar xvf /tmp/java-{{ java7oracle.build_version }}.tar.gz chdir={{ java7oracle.destination }} creates={{ java7oracle.destination }}{{ java_extract_dir.stdout }}
+  when: java.changed and java_version == "7-oracle"
+  sudo: true
+  tags: java
+
+- name: "[java7oracle] Set-up java with the update-alternatives"
+  command: update-alternatives --install "/usr/bin/java" "java" "{{ java7oracle.destination }}{{ java_extract_dir.stdout }}bin/java" 1
+  when: java.changed and java_version == "7-oracle"
+  sudo: true
+  tags: java 
+
+- name: "[java7oracle] Set-up directory for java 7 with the update-alternatives"
+  command: update-alternatives --install "/usr/lib/jvm/java-7-oracle" "java_dir" "{{ java7oracle.destination }}{{ java_extract_dir.stdout }}" 1
+  when: java.changed and java_version == "7-oracle"
+  sudo: true
+  tags: java
+
+- name: ensure that Java 8 openjdk is installed
+  yum: name=java-1.8.0-openjdk state=present
+  when: java_version == "8-openjdk"

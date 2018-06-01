@@ -1,0 +1,6 @@
+[apirest]
+localhost
+
+[apirest:vars]
+deploy_path='/home'
+env="prod_cl"

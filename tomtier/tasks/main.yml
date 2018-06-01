@@ -1,0 +1,10 @@
+---
+
+- name: add directory for countries
+  file:
+    path: "{{product_dir}}/{{ item.code_country }}"
+    state: present
+    owner: "tomcat"
+    state: directory
+  with_items:
+     - "{{country}}"

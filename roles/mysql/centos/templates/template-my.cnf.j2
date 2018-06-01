@@ -1,0 +1,15 @@
+[client]
+user=root
+password={%if ansible_distribution_major_version == "6" %}{{ mysql_root_password }}{%else%}{{mysql_root_password_centos7}}{% endif %}
+
+[mysqldump]
+user=root
+password={%if ansible_distribution_major_version == "6" %}{{ mysql_root_password }}{%else%}{{mysql_root_password_centos7}}{% endif %}
+
+[mysqladmin]
+user=root
+password={%if ansible_distribution_major_version == "6" %}{{ mysql_root_password }}{%else%}{{mysql_root_password_centos7}}{% endif %}
+
+[mysqlcheck]
+user=root
+password={%if ansible_distribution_major_version == "6" %}{{ mysql_root_password }}{%else%}{{mysql_root_password_centos7}}{% endif %}

@@ -1,0 +1,123 @@
+vcl 4.0;
+backend apirest_vidal_fr {
+    .host = "127.0.0.1";
+    .port = "{{http_tomcat | default ("8080")}}";
+    .connect_timeout = 60s; # Wait a maximum  for backend connection (tomcat)
+    .first_byte_timeout = 55s; # Wait a maximum of seconde for the first byte to come from your backend
+    .between_bytes_timeout = 55s;
+}
+
+acl purge {
+   "localhost";
+}
+
+sub vcl_recv {
+
+   # setting backend
+   set req.backend_hint = apirest_vidal_fr;
+
+
+    # Allow PURGE from localhost
+   if (req.method == "PURGE") {
+      if (!client.ip ~ purge) {
+         return (synth(405, "Not allowed."));
+      }
+      set req.hash_always_miss = true; 
+      set req.method = "GET";
+      set req.http.purgeable = 1;
+   }
+
+   if (req.method != "GET" &&
+         req.method != "HEAD" &&
+         req.method != "PUT" &&
+         req.method != "POST" &&
+         req.method != "TRACE" &&
+         req.method != "OPTIONS" &&
+         req.method != "DELETE") {
+      /* Non-RFC2616 or CONNECT which is weird. */
+      return (pipe);
+   }
+
+   if (req.method != "GET" && req.method != "HEAD") {
+      /* We only deal with GET and HEAD by default */
+      return (pass);
+   }
+
+
+    # ignore userdata apis
+   if (req.url ~ "userdata/") {
+      return (pass);
+   }
+   
+   # Don't cache this for monitoring
+   if (req.url ~ "/rest/api/molecule/310") {
+        return(pass);
+   }
+
+   # ignore api version 
+   if (req.url ~ "/rest/api/version") {
+      return (pass);
+   }
+
+
+   # Document access urls are special
+   if (req.url ~ "documents/opt") {
+      set req.http.document = 1;
+   } else {
+      set req.http.vxp = 1;
+   }
+
+   return (hash);
+}
+
+sub vcl_hash {
+    if (req.http.X-Forwarded-Proto) {
+       hash_data(req.http.X-Forwarded-Proto);
+    }
+}
+
+sub vcl_backend_response {
+    if (bereq.http.vxp) {
+       set beresp.ttl = 24h;
+    }
+
+    if (bereq.http.document) {
+       set beresp.ttl = 5m;
+    }
+
+    if (beresp.status >= 500) {
+        # set beresp.ttl = 120s;
+        set beresp.uncacheable = true;
+        return (deliver);
+    }
+    if (beresp.status >= 400) {
+       set beresp.ttl = 2s;
+    }
+    
+ 
+    return (deliver);
+}
+
+sub vcl_hit {
+  set req.http.X-Varnish-TTL = obj.ttl;
+  set req.http.X-Varnish-Cache = "hit";
+}
+
+sub vcl_miss {
+  set req.http.X-Varnish-TTL = 0;
+  set req.http.X-Varnish-Cache = "miss";
+}
+
+sub vcl_deliver {
+    unset resp.http.Via;
+    unset resp.http.X-Varnish;
+    set resp.http.X-Varnish-Cache = req.http.X-Varnish-Cache;
+    #return (deliver);
+}
+
+
+sub vcl_backend_error {
+  return (deliver);
+}
+
+

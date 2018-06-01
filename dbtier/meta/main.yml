@@ -1,0 +1,5 @@
+dependencies:
+#  - {role: "ius" , when: not env == "prod_fr" or "prod_int" }
+#  - {role : "mysql", mysql_version: "5.5", when: not env == "prod_fr" or "prod_int"}
+  - {role : "mysql"}
+

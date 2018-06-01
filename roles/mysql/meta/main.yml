@@ -1,0 +1,2 @@
+dependencies:
+  - { role: mysql/centos, when: "ansible_os_family == 'RedHat'" } 

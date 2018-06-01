@@ -1,0 +1,155 @@
+#!/bin/bash
+# {{ ansible_managed }} 
+# /etc/init.d/tomcat -- startup script for the Tomcat  servlet engine
+#
+### BEGIN INIT INFO
+# Provides:   {{ product_name }}
+# Required-Start: $local_fs $remote_fs $network
+# Required-Stop: $local_fs $remote_fs $network
+# Should-Start: $named
+# Should-Stop: $named
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: Start Tomcat  {{ product_name }}.
+# Description: Start the Tomcat servlet engine.
+### END INIT INFO
+
+# location of java binary files
+{% if ansible_os_family == "Debian" %}
+	{% if java_version == "8" %}
+export JAVA_HOME=/usr/lib/jvm/java-8-oracle
+	{% elif java_version == "7" %}
+export JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk-amd64
+	{% elif java_version == "6" %}
+export JAVA_HOME=/usr/lib/jvm/java-6-sun
+	{% elif java_version == "7-oracle" %}
+export JAVA_HOME=/usr/lib/jvm/java-7-oracle
+ 	{% endif %}
+{% endif %} 
+
+{% if ansible_os_family == "RedHat" %}
+	{% if java_version == "8" %}
+export JAVA_HOME=/usr/lib/jvm/java-8-oracle
+	{% elif java_version == "7" %}
+export JAVA_HOME=/usr/lib/jvm/jre-1.7.0-openjdk.x86_64
+	{% elif java_version == "6" %}
+export JAVA_HOME=/usr/lib/jvm/java-6-sun
+	{% elif java_version == "7-oracle" %}
+export JAVA_HOME=/usr/lib/jvm/java-7-oracle
+        {% elif java_version == "8-openjdk" %}
+export JAVA_HOME=/usr/lib/jvm/jre-1.8.0-openjdk.x86_64/
+ 	{% endif %}
+{% endif %} 
+
+# location of tomcat directory
+export CATALINA_HOME={{ product_dir }}/tomcat
+#TOMCAT_USER is the default user of tomcat
+export TOMCAT_USER={{ user_tomcat |default("root")  }}
+#TOMCAT_USAGE is the message if this script is called without any options
+TOMCAT_USAGE="Usage: $0 {\e[00;32mstart\e[00m|\e[00;31mstop\e[00m|\e[00;32mstatus\e[00m|\e[00;31mrestart\e[00m}"
+#SHUTDOWN_WAIT is wait time in seconds for java proccess to stop
+SHUTDOWN_WAIT=15
+
+ 
+tomcat_pid() {
+        echo `ps -fe | grep ${CATALINA_HOME}/conf/logging.properties| grep -v grep | tr -s " "|cut -d" " -f2`
+}
+ 
+start() {
+  pid=$(tomcat_pid)
+  if [ -n "$pid" ]
+  then
+    echo -e "\e[00;31mTomcat is already running (pid: $pid)\e[00m"
+  else
+    # Start tomcat
+    echo -e "\e[00;32mStarting tomcat\e[00m"
+    #ulimit -n 100000
+    #umask 007
+    #/bin/su -p -s /bin/sh tomcat
+        if [ `user_exists $TOMCAT_USER` = "1" ]
+        then
+                su $TOMCAT_USER -s /bin/bash -c $CATALINA_HOME/bin/startup.sh
+        else
+                sh $CATALINA_HOME/bin/startup.sh
+        fi
+        status
+  fi
+  return 0
+}
+ 
+status(){
+          pid=$(tomcat_pid)
+          if [ -n "$pid" ]; then echo -e "\e[00;32mTomcat is running with pid: $pid\e[00m"
+          else echo -e "\e[00;31mTomcat is not running\e[00m"
+          fi
+}
+ 
+stop() {
+  pid=$(tomcat_pid)
+  if [ -n "$pid" ]
+  then
+    echo -e "\e[00;31mStoping Tomcat\e[00m"
+    #/bin/su -p -s /bin/sh tomcat
+	#Old
+        #sh $CATALINA_HOME/bin/shutdown.sh
+	if [ `user_exists $TOMCAT_USER` = "1" ]
+        	then
+                	su $TOMCAT_USER -s /bin/bash -c $CATALINA_HOME/bin/shutdown.sh
+        	else
+                	sh $CATALINA_HOME/bin/shutdown.sh
+        	fi
+
+    let kwait=$SHUTDOWN_WAIT
+    count=0;
+    until [ `ps -p $pid | grep -c $pid` = '0' ] || [ $count -gt $kwait ]
+    do
+      echo -n -e "\n\e[00;31mwaiting for processes to exit\e[00m";
+      sleep 1
+      let count=$count+1;
+    done
+ 
+    if [ $count -gt $kwait ]; then
+      echo -n -e "\n\e[00;31mkilling processes which didn't stop after $SHUTDOWN_WAIT seconds\e[00m"
+      kill -9 $pid
+    fi
+  else
+    echo -e "\e[00;31mTomcat is not running\e[00m"
+  fi
+ 
+  return 0
+}
+ 
+user_exists(){
+        if id -u $1 >/dev/null 2>&1; then
+          echo "1"
+        else
+          echo "0"
+        fi
+}
+ 
+case $1 in
+ 
+        start)
+          start
+        ;;
+       
+        stop)  
+          stop
+        ;;
+       
+        restart)
+          stop
+          sleep 15 
+          start
+        ;;
+       
+        status)
+                status
+               
+        ;;
+       
+        *)
+                echo -e $TOMCAT_USAGE
+        ;;
+esac    
+exit 0

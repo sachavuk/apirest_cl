@@ -1,0 +1,18 @@
+#{{ ansible_managed }}
+
+{{deploy_path}}/logs/nginx/{{ngx_default_server_name}}*.log {
+        {{ngx__logrorate_rotation_interval | default ("daily") }}
+        missingok
+        rotate {{ ngx_logrotate_count | default ("365") }}
+        compress
+        notifempty
+        create 644 nginx adm
+        sharedscripts
+        postrotate
+{% if ansible_distribution_major_version == "6" %}
+		/bin/kill -USR1 $(cat /var/run/nginx.pid 2>/dev/null) 2>/dev/null || :
+{% else %}
+                /bin/kill -USR1 `cat /run/nginx.pid 2>/dev/null` 2>/dev/null || true
+{% endif %}
+        endscript
+}

@@ -1,0 +1,9 @@
+- hosts: apirest
+  user: root
+  vars_files: 
+      - ['vars/env_{{ env }}.yml']
+      - ['vars/password.yml']
+  roles:  
+   - { role: webtier, tags: ["webtier", "apirest"] }
+   - { role: tomtier, tags: ["tomtier", "apirest"] }
+   - { role: dbtier, tags: ["dbtier", "apirest"] }

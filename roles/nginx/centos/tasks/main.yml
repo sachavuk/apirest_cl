@@ -1,0 +1,45 @@
+- name: Install nginx packages
+  yum: name=nginx state=installed 
+
+- name: Create the directories for site specific configurations
+  file: path=/etc/nginx/{{ item }} state=directory owner=root group={{nginx_user}} mode=0755
+  with_items:
+    - "sites-available"
+    - "sites-enabled"
+
+- name: create directory for nginx logs
+  file: path={{deploy_path}}/logs/nginx state=directory owner={{nginx_user}} 
+
+- name: remove default vhost nginx 
+  file: name=/etc/nginx/conf.d/default.conf state=absent
+
+- name: copy default vhost nginx
+  template: src=default.conf.j2 dest=/etc/nginx/sites-available/default.conf
+  notify: Reload Nginx
+
+- name: activated default vhost 
+  file: src=/etc/nginx/sites-available/default.conf dest=/etc/nginx/sites-enabled/default.conf state=link
+  notify: Reload Nginx
+
+- name: Copy the nginx configuration file 
+  template: src=nginx.conf.j2 dest=/etc/nginx/nginx.conf
+  register: nginx_conf_update
+ 
+- name: copy logrotate template
+  template: src=logrotate.j2 dest=/etc/logrotate.d/{{ngx_default_server_name}}
+  when: ngx_default_server_name is defined
+
+- name: Copy error html file
+  template: src=50x.html.j2 dest=/usr/share/nginx/html/50x.html owner={{nginx_user}} group={{nginx_user}} mode=0644
+
+- name: Check nginx syntax of configuration files
+  shell: nginx -t
+  register: result
+  when: nginx_conf_update.changed
+  notify: 
+   - Restart Nginx
+
+- name: Start the nginx service on boot
+  service: name=nginx enabled=yes
+
+

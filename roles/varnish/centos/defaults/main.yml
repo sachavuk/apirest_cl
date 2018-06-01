@@ -1,0 +1,5 @@
+varnish_version: "4.1.10"
+varnish_vcl_file: "default.vcl"
+varnish_config_path: "/etc/varnish"
+varnish_storage_type: "malloc"
+varnishncsa_path_log: "/home/logs/varnish/"

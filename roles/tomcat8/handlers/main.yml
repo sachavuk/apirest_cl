@@ -1,0 +1,11 @@
+- name: restart tomcatd
+  service: 
+     name: "{{ product_name }}" 
+     state: restarted
+     daemon_reload: yes
+
+- name: restart tomcat
+  service:
+     name: "{{ product_name }}"
+     state: restarted
+

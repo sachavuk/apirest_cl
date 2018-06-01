@@ -1,0 +1,11 @@
+---
+
+java8: 
+  build_version: "8u151"
+  code_version: "e758a0de34e24606bca991d704f6dcbf"
+  version: "b12"
+  type: "jdk" # type can be "server-jre", "jre", "jdk"
+  architecture: "x64" # can be "x64", "i586"
+  destination: "/usr/lib/jvm" 
+
+ 

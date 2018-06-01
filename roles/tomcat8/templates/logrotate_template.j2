@@ -1,0 +1,25 @@
+# {{ ansible_managed }}
+
+{{ product_dir }}/tomcat/logs/*log {
+    {% if  user_tomcat is defined %}
+    #su {{ user_tomcat }} {{ user_tomcat }}
+    {% endif %}
+    notifempty
+    copytruncate
+    daily
+    rotate 10
+    compress
+    missingok
+}
+
+{{ product_dir }}/tomcat/logs/catalina.out {
+    {% if  user_tomcat is defined %}
+   # su {{ user_tomcat }} {{ user_tomcat }}
+    {% endif %}
+    notifempty
+    copytruncate
+    daily
+    rotate 10
+    compress
+    missingok
+}

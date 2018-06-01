@@ -1,0 +1,10 @@
+- name: copy java rpm.bin
+  copy: src="java/files/$item" dest="/root" mode=555 
+  with_items:
+    - jdk-6u43-linux-x64-rpm.bin
+    - jre-6u43-linux-x64-rpm.bin
+- name: extract rmp.bin
+  shell: creates="/root/$item" /root/$item.bin
+  with_items:
+    - jdk-6u43-linux-x64-rpm
+    - jre-6u43-linux-x64-rpm 

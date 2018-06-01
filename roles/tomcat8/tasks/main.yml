@@ -1,0 +1,53 @@
+- name: create user tomcat
+  user: name={{ user_tomcat }} createhome="no" state=present  shell=/sbin/nologin
+  when: user_tomcat is defined
+
+- name: create directory for product
+  file: path={{ product_dir }}  state=directory 
+  when: product_dir is defined
+
+- name: download tomcat
+  get_url: url="{{tomcat_tgz_url}}" dest="{{product_dir}}/{{tomcat_tgz}}" mode=0744
+
+- name: untar tomcat
+  shell: creates="{{product_dir}}/{{tomcat_dir}}/bin/startup.sh" cd {{product_dir}} && tar -zxvf {{tomcat_tgz}}
+
+- name: create tomcat symlink
+  file: src="{{product_dir}}/{{tomcat_dir}}" dest="{{product_dir}}/tomcat" state=link
+
+- name: copy configuration tomcat server.xml
+  template: src="server.xml.j2" dest="{{product_dir}}/tomcat/conf/server.xml"
+  when: tomcat_update_conf == "True"
+  notify: restart tomcat
+
+- name: copy configuration tomcat setenv.sh
+  template: src="setenv.sh.j2" dest="{{product_dir}}/tomcat/bin/setenv.sh"
+  notify: restart tomcat
+
+- name: Create directory for classpath if defined
+  file: path="{{ tomcat_classpath}}" state=directory owner={{tomcat_user}} group={{ tomcat_user}}
+  when: tomcat_classpath is defined 
+
+- name: Create directory for serverloader if defined
+  file: path="{{ tomcat_server_loader }}" state=directory owner="{{ tomcat_user }}" group="{{ tomcat_user }}" 
+  when: tomcat_server_loader is defined
+
+- name: copy catalina.properties
+  template: src=catalina.properties.j2 dest="{{product_dir}}/tomcat/conf/catalina.properties" owner={{ tomcat_user }} group={{ tomcat_user }}
+  notify: restart tomcat
+
+- name: add user privileges on tomcat directory
+  file: path={{ product_dir }}  state=directory owner={{ user_tomcat }} group={{ user_tomcat }} mode=754 recurse="yes"
+  when: user_tomcat is defined
+
+- name: copy logrotate conf for tomcat
+  template: src=logrotate_template.j2 dest=/etc/logrotate.d/tomcat_{{ product_name }} mode=0644 
+
+- name:  copy init script for tomcat
+  template: src=tomcat-init.j2 dest=/etc/init.d/{{ product_name }} mode=0754 
+  tags: tomcat_init
+
+  
+- name: enable service tomcat on boot
+  service: name={{ product_name }} enabled=yes
+  when: ansible_distribution_major_version == "6" 

@@ -1,0 +1,44 @@
+---
+product_dir: /home/products/apirest
+product_name: apirest
+JAVA_OPTS: "-Dspring.profiles.active=atom -Xmx4096m -Dfile.encoding=UTF-8"
+user_tomcat: 'tomcat'
+http_shutdown: '8350'
+http_tomcat: '8080'
+tomcat_address: "localhost"
+
+ngx_default_server_name: "vademecum.saludenred.cl"
+
+auth_status: "disable"
+server_name: "{{ ngx_default_server_name }} {% for language in country%} {{language.server_name}} {% endfor %}"
+
+country:
+ - 
+   code_country: "cl"
+   server_name: "vademecum.saludenred.cl" 
+   locale: "es-CL" 
+
+tomcat_classpath: "{{product_dir}}/cl"
+
+mysql_db:
+ - name: "cldb"
+
+mysql_users:
+     - name: admcl
+       pass: "{{admcl_pwd}}"
+       priv: "cldb.*:ALL"
+       host: "localhost"
+
+#Conf nginx
+nginx_worker_processes: "auto"
+nginx_max_clients: 4096
+nginx_time_out: 10
+ngx_logrotate_count: 365
+
+#Conf varnish
+varnish_listen_port: 8090
+varnish_storage_size: 8G
+
+#conf mysql 
+update_mysql_conf: "False"
+

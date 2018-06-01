@@ -1,0 +1,2 @@
+dependencies:
+  - { role: varnish/centos, when: "ansible_os_family == 'RedHat'" } 

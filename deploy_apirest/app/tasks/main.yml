@@ -1,0 +1,36 @@
+- shell: basename /var/tmp/app/{{env}}/*war
+  delegate_to: 127.0.0.1
+  register: name_file
+  tags: test
+- shell: basename /var/tmp/conf_{{env}}/*properties
+  delegate_to: 127.0.0.1
+  register: name_file_conf
+  tags: test 
+- debug: msg="the file name is {{ name_file.stdout }} and conf file is {{ name_file_conf.stdout }}"
+  tags: test
+- name: ensure that folder is empty
+  file: path={{product_dir}}/MaJ state=absent
+- name: ensure that folder for update exist
+  file: path={{product_dir}}/MaJ state=directory
+- name: copy source file into remote host
+  copy: src="/var/tmp/app/{{env}}/{{name_file.stdout}}" dest="{{product_dir}}/MaJ"
+- name: ensure that webapps.new doesn't exist
+  file: path="{{product_dir}}/tomcat/webapps.new" state=absent
+- name: prepare new folder webapps.new.ROOT
+  file: path="{{product_dir}}/tomcat/webapps.new/ROOT" state=directory
+- name: unzip war file into directory
+  unarchive: src="{{product_dir}}/MaJ/{{name_file.stdout}}" dest="{{product_dir}}/tomcat/webapps.new/ROOT/" copy=no owner="tomcat" group="tomcat"
+- name: copy configuration file
+  copy: src="/var/tmp/app/{{env}}/conf_{{ env }}/{{name_file_conf.stdout}}" dest={{product_dir}}/tomcat/webapps.new/ROOT/WEB-INF/classes/{{ name_file_conf.stdout }}
+- name: stop service 
+  service: name={{  product_name }} state=stopped 
+- name: remove the old webapps file
+  file: path={{product_dir }}/tomcat/webapps.old state=absent
+- name:  swtich to the new version
+  shell: "/bin/mv -v webapps webapps.old && /bin/mv -v webapps.new webapps"
+  args: 
+    chdir: "{{product_dir}}/tomcat/"
+- name: ensure that permissions are good
+  file: path={{product_dir}} owner=tomcat group=tomcat recurse=yes
+- name: start service 
+  service: name={{ product_name }} state=started

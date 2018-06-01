@@ -1,0 +1,9 @@
+- hosts: apirest
+  user: root
+  vars_files: 
+      - ['../vars/env_{{ env }}.yml']
+      - ['../vars/password.yml']
+  roles: 
+    - { role: app, tags: [ 'app', 'all'] }
+    - { role: data, tags: [ 'data', 'all'] }
+

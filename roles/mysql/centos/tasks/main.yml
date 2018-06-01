@@ -1,0 +1,146 @@
+- name: copy repository file
+  copy: src=mysql-community-el7.repo dest=/etc/yum.repos.d/mysql-community-el7.repo
+  when: ansible_distribution_major_version == "7"
+
+- name: copy GPG key
+  copy: src=RPM-GPG-KEY-mysql dest=/etc/pki/rpm-gpg/RPM-GPG-KEY-mysql
+  when: ansible_distribution_major_version == "7"
+
+- name: ensure mysql is installed
+  yum: pkg={{item}} state=installed
+  with_items: 
+     - mysql
+     - mysql-server
+  when: mysql_version is not defined
+  register: first_intall
+
+- name: ensure
+  yum: pkg=yum-plugin-replace state=installed
+  when: mysql_version is defined and ( mysql_version == "5.5" or mysql_version == "5.6")
+
+- name: ensure mysql55 is installed
+  yum: pkg={{item}} state=installed
+  with_items: 
+     - mysql55
+     - mysql55-server
+  when: mysql_version is defined and mysql_version == "5.5" and ansible_distribution_major_version == "6"
+
+- name: ensure mysql56 is installed
+  yum: pkg={{item}} state=installed
+  with_items: 
+     - mysql56u
+     - mysql56u-server
+  when: mysql_version is defined and mysql_version == "5.6" and ansible_distribution_major_version == "6"
+
+- name: Create tmp dir when defined
+  file: path={{mysql_tmp_dir }} state=directory owner=mysql group=mysql 
+  when: mysql_tmp_dir is defined
+
+- name: ensure that mysql-python is installed
+  yum: pkg="MySQL-python" state=installed
+  ignore_errors: yes
+
+- name: copy MySQL configuration template - centos 6
+  template: src="centos_generic_my.cnf.j2" dest="/etc/my.cnf" backup=yes
+  register:  my_cnf
+  when: update_mysql_conf == "True" and ansible_distribution_major_version == "6"
+
+- name: test configuration file before restart
+  shell: "/usr/libexec/mysqld --help --verbose 1>/dev/null"
+  notify: Restart MySQL 
+  when: my_cnf.changed and ansible_distribution_major_version == "6"
+
+- name: copy MySQL configuration template - centos 7
+  template: src="centos7_my.cnf.j2" dest="/etc/my.cnf" backup=yes
+  when: update_mysql_conf == "True" and ansible_distribution_major_version == "7"
+  notify: Restart MySQL 
+
+- name: enable mysql on boot 
+  service: name=mysqld state=started enabled=yes 
+
+- name: Check if .my.cnf file already exists.
+  stat: "path=/root/.my.cnf"
+  register: mycnf_file
+
+- name: include password for root  
+  include_vars: password.yml
+  tags: update_mysql_user
+  when: mycnf_file.stat.exists == false
+
+- name: Get temporary MySQL root password
+  shell: grep 'temporary password' /var/log/mysqld.log | awk '{print $NF}'
+  register: mysql_root_temp_password
+  when: ansible_distribution_major_version == "7" and first_intall.changed
+
+- name: Set the MySQL root password after the first install- centos 7
+  shell: mysql -u root --password="{{ mysql_root_temp_password.stdout }}" --connect-expired-password -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '{{mysql_root_password_centos7}}';"
+  register: mysql_admin_root_password_result
+  failed_when: "'(using password: NO)' in mysql_admin_root_password_result.stderr"
+  when: ansible_distribution_major_version == "7" and first_intall.changed
+
+# 'localhost' needs to be the last item for idempotency, see
+# http://ansible.cc/docs/modules.html#mysql-user
+- name: Update MySQL root password for all root accounts - centos 6
+  mysql_user: >
+    name=root
+    host={{ item }}
+    password={{ mysql_root_password }}
+    check_implicit_admin=yes
+  with_items:
+    - 127.0.0.1
+    - ::1
+    - localhost
+  ignore_errors: yes
+  tags: update_mysql_user
+  when: mycnf_file.stat.exists == false  and ansible_distribution_major_version == "6"
+
+- name: Copy .my.cnf file with root password credentials.
+  template: >
+    src=template-my.cnf.j2
+    dest=/root/.my.cnf
+    owner=root group=root mode=600
+  when: mycnf_file.stat.exists == false
+
+- name: Update MySQL root password for all root accounts - centos 7
+  mysql_user: >
+    name=root
+    host={{ item }}
+    password={{ mysql_root_password_centos7 }}
+    check_implicit_admin=yes
+  with_items:
+    - 127.0.0.1
+    - ::1
+    - localhost
+  ignore_errors: yes
+  tags: update_mysql_user
+  when: mycnf_file.stat.exists == false  and ansible_distribution_major_version == "7"
+
+- name: Delete anonymous MySQL user for localhost.
+  mysql_user: >
+    name=""
+    state=absent
+  ignore_errors: yes
+  when: mycnf_file.stat.exists == false
+
+- name: Remove the MySQL test database.
+  mysql_db: >
+    name="test"
+    state=absent
+  ignore_errors: yes
+  when: mycnf_file.stat.exists == false
+
+- name: Create directory for mysql log
+  file: path="/var/log/mysql" state=directory owner=mysql group=mysql 
+
+
+- name: Create the database's
+  mysql_db: name={{ item.name }} encoding={{ mysql_db_encoding }} state=present
+  with_items: "{{ mysql_db|default([]) }}"
+  when: mysql_db is defined
+
+- name: Create the database users
+  mysql_user: name={{ item.name }}  password={{ item.pass|default("foobar") }}  
+                priv={{ item.priv|default("*.*:ALL") }} state=present host={{ item.host | default("localhost") }}
+  with_items: "{{ mysql_users|default([])  }}"
+  when: mysql_users is defined
+  tags: mysql_users

@@ -1,0 +1,2 @@
+- name: restart_mysql_centos
+  service: name=mysqld state=restarted
