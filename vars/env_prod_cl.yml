@@ -41,4 +41,4 @@ varnish_storage_size: 8G
 
 #conf mysql 
 update_mysql_conf: "False"
-
+mysql_version: "5.5"
